@@ -52,6 +52,7 @@ package("assimp")
     add_configs("asan",                  {description = "Enable AddressSanitizer.", default = false, type = "boolean"})
     add_configs("ubsan",                 {description = "Enable Undefined Behavior sanitizer.", default = false, type = "boolean"})
     add_configs("draco",                 {description = "Enable Draco, primary for GLTF.", default = false, type = "boolean"})
+    add_configs("use_ccache",            {description = "Use ccache to speed up repeated builds.", default = true, type = "boolean"})
 
     add_deps("cmake", "minizip", "zlib")
 
@@ -110,6 +111,7 @@ package("assimp")
         add_config_arg("no_export",        "ASSIMP_NO_EXPORT")
         add_config_arg("asan",             "ASSIMP_ASAN")
         add_config_arg("ubsan",            "ASSIMP_UBSAN")
+        add_config_arg("use_ccache",       "ASSIMP_BUILD_USE_CCACHE")
 
         if package:version():ge("5.2.5") then
             add_config_arg("draco", "ASSIMP_BUILD_DRACO")
