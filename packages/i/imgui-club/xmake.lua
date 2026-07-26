@@ -7,7 +7,7 @@ package("imgui-club")
 
     add_versions("2026.07.22", "a436e793fe44a2c8e827bfcbf138fcbe11940476")
 
-    add_deps("imgui")
+    add_deps("imgui master")
 
     on_install("windows", "linux", "macosx", "mingw", "android", "iphoneos", function (package)
         local imgui = package:dep("imgui")
