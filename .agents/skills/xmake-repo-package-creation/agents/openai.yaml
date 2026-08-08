@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xmake Repo Package Creation"
+  short_description: "Add packages using official xmake-repo conventions"
+  default_prompt: "Use $xmake-repo-package-creation to add this package following the official xmake-repo workflow."

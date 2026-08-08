@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xmake Repo Package Testing"
+  short_description: "Test local xmake packages with the official workflow"
+  default_prompt: "Use $xmake-repo-package-testing to test this package with the official xmake-repo workflow."
