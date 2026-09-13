@@ -8,25 +8,12 @@ package("tracy")
 
     add_versions("v0.14.1", "bf4af567e9c7524d07f3caa745fad02fb33bd5694f11910750382d1efbb251c1")
     add_versions("v0.14.0", "a932cf2a90adbf63f87b449fa4374a52f18a36c4a3858d4d69d3e75d62fa5f6a")
-    add_versions("v0.13.1", "d4efc50ebcb0bfcfdbba148995aeb75044c0d80f5d91223aebfaa8fa9e563d2b")
-    add_versions("v0.13.0", "b0e972dfeebe42470187c1a47b449c8ee9e8656900bcf87b403175ed50796918")
-    add_versions("v0.12.2", "09617765ba5ff1aa6da128d9ba3c608166c5ef05ac28e2bb77f791269d444952")
-    add_versions("v0.12.1", "03580b01df3c435f74eec165193d6557cdbf3a84d39582ca30969ef5354560aa")
-    add_versions("v0.12.0", "ce2fb5b89aeb6db8401d7efe1bfe8393b7a81ca551273e8c6dd46ed37c02a040")
-    add_versions("v0.11.1", "2c11ca816f2b756be2730f86b0092920419f3dabc7a7173829ffd897d91888a1")
-    add_versions("v0.11.0", "b591ef2820c5575ccbf17e2e7a1dc1f6b9a2708f65bfd00f4ebefad2a1ccf830")
-    add_versions("v0.10", "a76017d928f3f2727540fb950edd3b736caa97b12dbb4e5edce66542cbea6600")
-    add_versions("v0.9.1", "c2de9f35ab2a516a9689ff18f5b62a55b73b93b66514bd09ba013d7957993cd7")
-    add_versions("v0.9", "93a91544e3d88f3bc4c405bad3dbc916ba951cdaadd5fcec1139af6fa56e6bfc")
-    add_versions("v0.8.2", "4784eddd89c17a5fa030d408392992b3da3c503c872800e9d3746d985cfcc92a")
-
-    add_patches("v0.13.1", "https://github.com/wolfpld/tracy/commit/d79b6d040efaef3010c1e38bda616483bba10561.patch", "44314be366088cd16954eb5df8adae0b49e44df0d7b0371936291c25c96c4775")
 
     add_configs("cmake",                            {description = "Use cmake buildsystem", default = true, type = "boolean"})
 
     add_configs("tracy_enable",                     {type = "boolean", default = true,  description = "Enable profiling"})
     add_configs("on_demand",                        {type = "boolean", default = false, description = "On-demand profiling"})
-    add_configs("enforce_callstack",                {type = "boolean", default = true,  description = "Enfore callstack collection for tracy regions"})
+    add_configs("callstack_depth",                  {description = "Default Tracy callstack depth for zones (0 disables)", default = "16", values = {"0", "8", "16", "32"}})
     add_configs("callstack",                        {type = "boolean", default = true,  description = "Enable all callstack related functionality"})
     add_configs("callstack_inlines",                {type = "boolean", default = false, description = "Enable the inline functions in callstacks"})
     add_configs("only_localhost",                   {type = "boolean", default = false, description = "Only listen on the localhost interface"})
@@ -45,7 +32,6 @@ package("tracy")
     add_configs("libunwind_backtrace",              {type = "boolean", default = false, description = "Use libunwind backtracing where supported"})
     add_configs("symbol_offline_resolve",           {type = "boolean", default = false, description = "Instead of full runtime symbol resolution, only resolve the image path and offset to enable offline symbol resolution"})
     add_configs("libbacktrace_elf_dynload_support", {type = "boolean", default = false, description = "Enable libbacktrace to support dynamically loaded elfs in symbol resolution resolution after the first symbol resolve operation"})
-    add_configs("delayed_init",                     {type = "boolean", default = false, description = "Enable delayed initialization of the library (init on first call)"})
     add_configs("manual_lifetime",                  {type = "boolean", default = false, description = "Enable the manual lifetime management of the profile"})
     add_configs("fibers",                           {type = "boolean", default = true,  description = "Enable fibers support"})
     add_configs("crash_handler",                    {type = "boolean", default = true,  description = "Enable crash handling"})
@@ -59,15 +45,6 @@ package("tracy")
         add_syslinks("pthread")
     elseif is_plat("bsd") then
         add_syslinks("pthread", "execinfo")
-    end
-
-    if on_check then
-        on_check("android", function (package)
-            if package:version() and package:version():eq("v0.13.1") then
-                local ndk = package:toolchain("ndk"):config("ndkver")
-                assert(ndk and tonumber(ndk) > 22, "package(tracy v0.13.1) require ndk version > 22")
-            end
-        end)
     end
 
     on_load(function (package)
@@ -90,8 +67,11 @@ package("tracy")
             table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
             table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
 
+            -- Tracy 0.14 defaults TRACY_ENABLE to OFF in CMakeLists.txt.
+            table.insert(configs, "-DTRACY_ENABLE=" .. (package:config("tracy_enable") and "ON" or "OFF"))
             table.insert(configs, "-DTRACY_ON_DEMAND=" .. (package:config("on_demand") and "ON" or "OFF"))
-            table.insert(configs, "-DTRACY_CALLSTACK=" .. (package:config("enforce_callstack") and "ON" or "OFF"))
+            -- Tracy 0.14 exposes TRACY_CALLSTACK as a numeric depth, not a boolean.
+            table.insert(configs, "-DTRACY_CALLSTACK=" .. tostring(package:config("callstack_depth")))
             table.insert(configs, "-DTRACY_NO_CALLSTACK=" .. (package:config("callstack") and "OFF" or "ON"))
             table.insert(configs, "-DTRACY_NO_CALLSTACK_INLINES=" .. (package:config("callstack_inlines") and "OFF" or "ON"))
             table.insert(configs, "-DTRACY_ONLY_LOCALHOST=" .. (package:config("only_localhost") and "ON" or "OFF"))
@@ -106,7 +86,6 @@ package("tracy")
             table.insert(configs, "-DTRACY_NO_FRAME_IMAGE=" .. (package:config("frame_image") and "OFF" or "ON"))
             table.insert(configs, "-DTRACY_NO_SYSTEM_TRACING=" .. (package:config("system_tracing") and "OFF" or "ON"))
             table.insert(configs, "-DTRACY_PATCHABLE_NOPSLEDS=" .. (package:config("patchable_nopsleds") and "ON" or "OFF"))
-            table.insert(configs, "-DTRACY_DELAYED_INIT=" .. (package:config("delayed_init") and "ON" or "OFF"))
             table.insert(configs, "-DTRACY_MANUAL_LIFETIME=" .. (package:config("manual_lifetime") and "ON" or "OFF"))
             table.insert(configs, "-DTRACY_FIBERS=" .. (package:config("fibers") and "ON" or "OFF"))
             table.insert(configs, "-DTRACY_NO_CRASH_HANDLER=" .. (package:config("crash_handler") and "OFF" or "ON"))
@@ -118,8 +97,12 @@ package("tracy")
             -- collect tracy defines from cmake configs
             for _, config in ipairs(configs) do
                 local define, value = config:match("-D(TRACY_%S+)=(.*)")
-                if define and value and value == "ON" then
-                    package:add("defines", define)
+                if define and value then
+                    if value == "ON" then
+                        package:add("defines", define)
+                    elseif value ~= "OFF" and value ~= "" then
+                        package:add("defines", define .. "=" .. value)
+                    end
                 end
             end
 
@@ -129,7 +112,7 @@ package("tracy")
             local configs = {
                 tracy_enable = package:config("tracy_enable"),
                 on_demand = package:config("on_demand"),
-                enforce_callstack = package:config("enforce_callstack"),
+                callstack_depth = package:config("callstack_depth"),
                 callstack = not package:config("callstack"),
                 callstack_inlines = not package:config("callstack_inlines"),
                 only_localhost = package:config("only_localhost"),
@@ -148,7 +131,6 @@ package("tracy")
                 libunwind_backtrace = package:config("libunwind_backtrace"),
                 symbol_offline_resolve = package:config("symbol_offline_resolve"),
                 libbacktrace_elf_dynload_support = package:config("libbacktrace_elf_dynload_support"),
-                delayed_init = package:config("delayed_init"),
                 manual_lifetime = package:config("manual_lifetime"),
                 fibers = package:config("fibers"),
                 crash_handler = not package:config("crash_handler"),
@@ -159,7 +141,6 @@ package("tracy")
             local defines = {
                 tracy_enable = "TRACY_ENABLE",
                 on_demand = "TRACY_ON_DEMAND",
-                enforce_callstack = "TRACY_ENABLE_CALLSTACK",
                 callstack = { define = "TRACY_NO_CALLSTACK", invert = true },
                 callstack_inlines = { define = "TRACY_NO_CALLSTACK_INLINES", invert = true },
                 only_localhost = "TRACY_ONLY_LOCALHOST",
@@ -178,12 +159,16 @@ package("tracy")
                 libunwind_backtrace = "TRACY_LIBUNWIND_BACKTRACE",
                 symbol_offline_resolve = "TRACY_SYMBOL_OFFLINE_RESOLVE",
                 libbacktrace_elf_dynload_support = "TRACY_LIBBACKTRACE_ELF_DYNLOAD_SUPPORT",
-                delayed_init = "TRACY_DELAYED_INIT",
                 manual_lifetime = "TRACY_MANUAL_LIFETIME",
                 fibers = "TRACY_FIBERS",
                 crash_handler = { define = "TRACY_NO_CRASH_HANDLER", invert = true },
                 verb = "TRACY_VERBOSE"
             }
+
+            local callstack_depth = tonumber(package:config("callstack_depth")) or 0
+            if callstack_depth > 0 then
+                package:add("defines", "TRACY_CALLSTACK=" .. tostring(callstack_depth))
+            end
 
             for name, def in pairs(defines) do
                 local define, invert

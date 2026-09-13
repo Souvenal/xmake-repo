@@ -3,7 +3,7 @@ add_rules("utils.install.cmake_importfiles")
 
 option("tracy_enable",                      {type = "boolean", default = true,  description = "Enable profiling"})
 option("on_demand",                         {type = "boolean", default = false, description = "On-demand profiling"})
-option("enforce_callstack",                 {type = "boolean", default = false, description = "Enfore callstack collection for tracy regions"})
+option("callstack_depth",                   {description = "Default Tracy callstack depth for zones (0 disables)", default = "16", values = {"0", "8", "16", "32"}})
 option("callstack",                         {type = "boolean", default = false, description = "Enable all callstack related functionality"})
 option("callstack_inlines",                 {type = "boolean", default = false, description = "Enable the inline functions in callstacks"})
 option("only_localhost",                    {type = "boolean", default = false, description = "Only listen on the localhost interface"})
@@ -22,7 +22,6 @@ option("timer_fallback",                    {type = "boolean", default = false, 
 option("libunwind_backtrace",               {type = "boolean", default = false, description = "Use libunwind backtracing where supported"})
 option("symbol_offline_resolve",            {type = "boolean", default = false, description = "Instead of full runtime symbol resolution, only resolve the image path and offset to enable offline symbol resolution"})
 option("libbacktrace_elf_dynload_support",  {type = "boolean", default = false, description = "Enable libbacktrace to support dynamically loaded elfs in symbol resolution resolution after the first symbol resolve operation"})
-option("delayed_init",                      {type = "boolean", default = false, description = "Enable delayed initialization of the library (init on first call)"})
 option("manual_lifetime",                   {type = "boolean", default = false, description = "Enable the manual lifetime management of the profile"})
 option("fibers",                            {type = "boolean", default = true,  description = "Enable fibers support"})
 option("crash_handler",                     {type = "boolean", default = false, description = "Enable crash handling"})
@@ -56,8 +55,9 @@ target("tracy")
         add_defines("TRACY_ON_DEMAND")
     end
 
-    if has_config("enforce_callstack") then
-        add_defines("TRACY_CALLSTACK")
+    local callstack_depth = tonumber(get_config("callstack_depth")) or 0
+    if callstack_depth > 0 then
+        add_defines("TRACY_CALLSTACK=" .. tostring(callstack_depth))
     end
 
     if has_config("callstack") then
@@ -114,10 +114,6 @@ target("tracy")
 
     if has_config("patchable_nopsleds") then
         add_defines("TRACY_PATCHABLE_NOPSLEDS")
-    end
-
-    if has_config("delayed_init") then
-        add_defines("TRACY_DELAYED_INIT")
     end
 
     if has_config("manual_lifetime") then
