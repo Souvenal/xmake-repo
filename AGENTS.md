@@ -16,7 +16,6 @@ Each package lives at `packages/<first-letter>/<package-name>/xmake.lua`. Direct
 ## Known Issues
 
 - `packages/a/assimp` references patch files (`packages/a/assimp/patches/...`) that don't exist in this repo — those versions will fail at install time.
-- `packages/v/vulkan-loader` has duplicate `add_versions` for version `1.4.335+0`.
 - `packages/i/imgui-club` depends on `imgui master` (bleeding edge) — builds may break.
 - No CI/CD pipeline — testing is manual.
 

@@ -15,7 +15,12 @@ package("vulkan-memory-allocator")
     add_versions("v3.3.0", 'c4f6bbe6b5a45c2eb610ca9d231158e313086d5b1a40c9922cb42b597419b14e')
     add_versions("v3.4.0", '822aa850c6ce77346ae96a8a1d351d52e77e85929f35363849a0a4e638e0a2a1')
 
-    add_deps("vulkan-headers 1.4.350+0")
+    -- VMA adapts to the included Vulkan headers at compile time: VMA_VULKAN_VERSION is
+    -- derived from the newest VK_VERSION_1_x the headers define (v3.0.x/v3.1.0 cap at
+    -- Vulkan 1.3, v3.2.0+ at Vulkan 1.4). Newer headers are backward compatible, so we
+    -- just use the latest by default; pin another version via add_requireconfs(), e.g.
+    -- add_requireconfs("**.vulkan-headers", {override = true, version = "1.4.309+0"})
+    add_deps("vulkan-headers")
 
     on_load(function (package)
         if package:version() and package:version():ge("3.1.0") then
