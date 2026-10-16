@@ -143,6 +143,10 @@ package("assimp")
             io.replace("CMakeLists.txt", "CMAKE_COMPILER_IS_MINGW", "MINGW", {plain = true})
         end
 
+        -- poly2tri's shapes.h uses std::ostream without including <ostream>; LLVM 23's libc++
+        -- no longer provides it transitively.
+        io.replace("contrib/poly2tri/poly2tri/common/shapes.h", "#include <vector>", "#include <ostream>\n#include <vector>", {plain = true})
+
         -- Assimp CMakeLists doesn't find minizip on Windows
         local packagedeps
         if package:is_plat("windows") then
